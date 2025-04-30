@@ -1,0 +1,608 @@
+nelmio_api_doc:
+    documentation:
+        servers:
+            - url: /api
+              description: E-Commerce API
+        info:
+            title: E-Commerce API
+            description: Complete API documentation for E-Commerce Platform
+            version: 1.0.0
+        tags:
+            - name: Account Management
+              description: User registration
+            - name: Product Management
+              description: Product CRUD operations (Admin only)
+            - name: Cart Management
+              description: Shopping cart operations
+            - name: Wishlist Management
+              description: User wishlist operations
+
+        components:
+            securitySchemes:
+                bearerAuth:
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT
+            
+            schemas:
+                User:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        username:
+                            type: string
+                            example: johndoe
+                        email:
+                            type: string
+                            format: email
+                            example: john@example.com
+                        firstname:
+                            type: string
+                            example: John
+
+                Product:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        code:
+                            type: string
+                            example: PD1234567
+                        name:
+                            type: string
+                            example: Product 1
+                        description:
+                            type: string
+                            example: Description Product 1
+                        image:
+                            type: string
+                            example: product1.jpg
+                        category:
+                            type: string
+                            example: Electronics
+                        price:
+                            type: number
+                            example: 99.99
+                        quantity:
+                            type: integer
+                            example: 100
+                        internalReference:
+                            type: string
+                            example: INT1234567
+                        shellId:
+                            type: number
+                            example: 2923290
+                        inventoryStatus:
+                            type: string
+                            enum: ['INSTOCK', 'LOWSTOCK', 'OUTOFSTOCK']
+                            example: INSTOCK
+                        rating:
+                            type: number
+                            example: 4.5
+
+                CartItem:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        product:
+                            $ref: '#/components/schemas/Product'
+                        quantity:
+                            type: integer
+                            example: 2
+                        addedAt:
+                            type: string
+                            format: date-time
+                            example: '2023-01-01T00:00:00+00:00'
+
+                WishlistItem:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        product:
+                            $ref: '#/components/schemas/Product'
+                        addedAt:
+                            type: string
+                            format: date-time
+                            example: '2023-01-01T00:00:00+00:00'
+
+            responses:
+                Unauthorized:
+                    description: Unauthorized - Missing or invalid JWT token
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: Not authenticated
+                Forbidden:
+                    description: Forbidden - Admin privileges required
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: Forbidden
+                                    message:
+                                        type: string
+                                        example: You need administrator privileges
+                NotFound:
+                    description: Resource not found
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: Resource not found
+                ValidationError:
+                    description: Validation failed
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+                                        example: Validation failed
+                                    errors:
+                                        type: object
+                                        additionalProperties:
+                                            type: string
+                                        example:
+                                            name: Must be a string
+                                            price: Must be a number
+
+        paths:
+            # Account
+            /token:
+                post:
+                    tags: ['Authentication']
+                    summary: Authenticate and get JWT token
+                    requestBody:
+                        content:
+                            application/json:
+                                schema:
+                                    type: object
+                                    required: [email, password]
+                                    properties:
+                                        email:
+                                            type: string
+                                            example: user@mail.com
+                                        password:
+                                            type: string
+                                            format: password
+                                            example: mypassword123
+                    responses:
+                        '200':
+                            description: Authentication successful
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            token:
+                                                type: string
+                                                example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                        '401':
+                            description: Invalid credentials
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            error:
+                                                type: string
+                                                example: Invalid credentials
+                                            message:
+                                                type: string
+                                                example: Bad email or password
+            /account:
+                post:
+                    tags: ['Account Management']
+                    summary: Register new user
+                    requestBody:
+                        content:
+                            application/json:
+                                schema:
+                                    type: object
+                                    required: [username, firstname, email, password]
+                                    properties:
+                                        username:
+                                            type: string
+                                            example: johndoe
+                                        firstname:
+                                            type: string
+                                            example: John
+                                        email:
+                                            type: string
+                                            format: email
+                                            example: john@example.com
+                                        password:
+                                            type: string
+                                            format: password
+                                            example: SecurePassword123!
+                    responses:
+                        '201':
+                            description: User registered successfully
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: User Created Successfully
+                        '400':
+                            $ref: '#/components/responses/ValidationError'
+                        '409':
+                            description: Conflict - Email already exists
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Email already exists
+
+            # Product
+            /product:
+                get:
+                    tags: ['Product Management']
+                    summary: List all products
+                    security: [{'bearerAuth': []}]
+                    responses:
+                        '200':
+                            description: List of products
+                            content:
+                                application/json:
+                                    schema:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/Product'
+                
+                post:
+                    tags: ['Product Management']
+                    summary: Create new product (Admin only)
+                    security: [{'bearerAuth': []}]
+                    requestBody:
+                        content:
+                            application/json:
+                                schema:
+                                    type: object
+                                    required: [name, price]
+                                    properties:
+                                        name:
+                                            type: string
+                                            example: Product 1
+                                        price:
+                                            type: number
+                                            example: 199.99
+                                        description:
+                                            type: string
+                                            example: Description product 1
+                                        quantity:
+                                            type: integer
+                                            example: 50
+                    responses:
+                        '201':
+                            description: Product created
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Product created successfully
+                        '400':
+                            $ref: '#/components/responses/ValidationError'
+                        '403':
+                            $ref: '#/components/responses/Forbidden'
+                        '409':
+                            description: Conflict - Product name/code exists
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            error:
+                                                type: string
+                                                example: Product name already exists
+
+            /product/{id}:
+                patch:
+                    tags: ['Product Management']
+                    summary: Update product (Admin only)
+                    security: [{'bearerAuth': []}]
+                    parameters:
+                        - name: id
+                          in: path
+                          required: true
+                          schema:
+                              type: integer
+                              example: 1
+                    requestBody:
+                        content:
+                            application/json:
+                                schema:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            example: Updated Product Name
+                                        price:
+                                            type: number
+                                            example: 249.99
+                    responses:
+                        '200':
+                            description: Product updated
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Product updated successfully
+                        '400':
+                            $ref: '#/components/responses/ValidationError'
+                        '403':
+                            $ref: '#/components/responses/Forbidden'
+                        '404':
+                            $ref: '#/components/responses/NotFound'
+                
+                delete:
+                    tags: ['Product Management']
+                    summary: Delete product (Admin only)
+                    security: [{'bearerAuth': []}]
+                    parameters:
+                        - name: id
+                          in: path
+                          required: true
+                          schema:
+                              type: integer
+                              example: 1
+                    responses:
+                        '200':
+                            description: Product deleted
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Product deleted
+                        '403':
+                            $ref: '#/components/responses/Forbidden'
+                        '404':
+                            $ref: '#/components/responses/NotFound'
+
+            # Cart
+            /cart:
+                get:
+                    tags: ['Cart Management']
+                    summary: Get user's cart
+                    security: [{'bearerAuth': []}]
+                    responses:
+                        '200':
+                            description: Cart contents
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            items:
+                                                type: array
+                                                items:
+                                                    $ref: '#/components/schemas/CartItem'
+                                            TotalItems:
+                                                type: integer
+                                                example: 3
+                        '401':
+                            $ref: '#/components/responses/Unauthorized'
+            /cart/add:   
+                post:
+                    tags: ['Cart Management']
+                    summary: Add item to cart
+                    security: [{'bearerAuth': []}]
+                    requestBody:
+                        content:
+                            application/json:
+                                schema:
+                                    type: object
+                                    required: [productId, quantity]
+                                    properties:
+                                        productId:
+                                            type: integer
+                                            example: 1
+                                        quantity:
+                                            type: integer
+                                            example: 1
+                    responses:
+                        '201':
+                            description: Item added to cart
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Product added to cart successfully
+                        '400':
+                            description: Bad request
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            error:
+                                                type: string
+                                                example: Invalid quantity
+                        '401':
+                            $ref: '#/components/responses/Unauthorized'
+                        '404':
+                            $ref: '#/components/responses/NotFound'
+
+            /cart/remove/{id}:
+                delete:
+                    tags: ['Cart Management']
+                    summary: Remove item from cart
+                    security: [{'bearerAuth': []}]
+                    parameters:
+                        - name: id
+                          in: path
+                          required: true
+                          schema:
+                              type: integer
+                              example: 1
+                    responses:
+                        '200':
+                            description: Item removed
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Item removed from cart successfully
+                        '401':
+                            $ref: '#/components/responses/Unauthorized'
+                        '404':
+                            $ref: '#/components/responses/NotFound'
+
+            /cart/clear:
+                delete:
+                    tags: ['Cart Management']
+                    summary: Clear cart
+                    security: [{'bearerAuth': []}]
+                    responses:
+                        '200':
+                            description: Cart cleared
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Cart cleared successfully
+                        '401':
+                            $ref: '#/components/responses/Unauthorized'
+
+            # Wishlist
+            /wishlist:
+                get:
+                    tags: ['Wishlist Management']
+                    summary: Get user's wishlist
+                    security: [{'bearerAuth': []}]
+                    responses:
+                        '200':
+                            description: Wishlist contents
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            items:
+                                                type: array
+                                                items:
+                                                    $ref: '#/components/schemas/WishlistItem'
+                        '401':
+                            $ref: '#/components/responses/Unauthorized'
+
+            /wishlist/add/{productId}:
+                post:
+                    tags: ['Wishlist Management']
+                    summary: Add product to wishlist
+                    security: [{'bearerAuth': []}]
+                    parameters:
+                        - name: productId
+                          in: path
+                          required: true
+                          schema:
+                              type: integer
+                              example: 1
+                    responses:
+                        '201':
+                            description: Product added
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Product added to wishlist successfully
+                        '401':
+                            $ref: '#/components/responses/Unauthorized'
+                        '404':
+                            $ref: '#/components/responses/NotFound'
+
+            /wishlist/remove/{id}:
+                delete:
+                    tags: ['Wishlist Management']
+                    summary: Remove item from wishlist
+                    security: [{'bearerAuth': []}]
+                    parameters:
+                        - name: id
+                          in: path
+                          required: true
+                          schema:
+                              type: integer
+                              example: 1
+                    responses:
+                        '200':
+                            description: Item removed
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Item removed from wishlist successfully
+                        '401':
+                            $ref: '#/components/responses/Unauthorized'
+                        '404':
+                            $ref: '#/components/responses/NotFound'
+
+            /wishlist/clear:
+                delete:
+                    tags: ['Wishlist Management']
+                    summary: Clear wishlist
+                    security: [{'bearerAuth': []}]
+                    responses:
+                        '200':
+                            description: Wishlist cleared
+                            content:
+                                application/json:
+                                    schema:
+                                        type: object
+                                        properties:
+                                            message:
+                                                type: string
+                                                example: Wishlist cleared successfully
+                        '401':
+                            $ref: '#/components/responses/Unauthorized'
+
+    areas:
+        path_patterns: # an array of regexps (document only routes under /api, except /api/doc)
+            - ^/api(?!/doc$)
+        host_patterns: # document only routes with a host of the form api.*
+            - ^api\.
