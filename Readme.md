@@ -25,3 +25,6 @@ composer install
 
 # 5. Setup database (inside container)
 php bin/console doctrine:migrations:migrate
+
+# 6. API Doc URL
+http://localhost:8080/api/doc
